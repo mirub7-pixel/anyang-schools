@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>안양시 고등학교 선택 도우미</title>
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=d07b8b2bb4b323c5dba137e8583f83eb&libraries=services"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#2563eb;--blue-d:#1d4ed8;--blue-l:#eff6ff;--blue-m:#dbeafe;
+  --g50:#f8fafc;--g100:#f1f5f9;--g200:#e2e8f0;--g400:#94a3b8;--g600:#475569;--g800:#1e293b;
+}
+body{font-family:-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;height:100vh;overflow:hidden;display:flex;flex-direction:column;color:var(--g800);font-size:14px}
+#hdr{height:56px;background:#fff;border-bottom:1px solid var(--g200);display:flex;align-items:center;gap:12px;padding:0 16px;flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,.08);z-index:200}
+#logo{font-size:15px;font-weight:800;color:var(--blue);white-space:nowrap}
+#logo span{color:var(--g800)}
+#home-wrap{display:flex;align-items:center;gap:7px}
+#home-lbl{font-size:12px;color:var(--g600);white-space:nowrap;font-weight:600}
+#home-input{padding:6px 10px;border:1.5px solid var(--g200);border-radius:8px;font-size:13px;font-family:inherit;outline:none;width:230px}
+#home-input:focus{border-color:var(--blue)}
+#home-search-btn{padding:6px 13px;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;white-space:nowrap;transition:.15s}
+#home-search-btn:hover{background:var(--blue-d)}
+#map-pick-btn{padding:6px 11px;background:var(--blue-l);color:var(--blue);border:1.5px solid var(--blue-m);border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;white-space:nowrap;transition:.15s}
+#map-pick-btn:hover{background:var(--blue-m)}
+#map-pick-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+#home-set-lbl{font-size:12px;color:var(--blue);font-weight:700;display:none;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#cmp-badge{display:none;margin-left:auto;padding:6px 14px;background:#f0fdf4;border:1.5px solid #bbf7d0;color:#15803d;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+#cmp-badge:hover{background:#dcfce7}
+#body{display:flex;flex:1;overflow:hidden}
+#left{width:272px;min-width:272px;background:#fff;border-right:1px solid var(--g200);display:flex;flex-direction:column;overflow:hidden}
+#list-hdr{padding:12px 14px 10px;border-bottom:1px solid var(--g200);flex-shrink:0}
+#list-hdr-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
+#list-title{font-size:14px;font-weight:700}
+#school-cnt{font-size:12px;color:var(--g400)}
+#filters{display:flex;gap:4px;flex-wrap:wrap}
+.chip{padding:4px 9px;border:1.5px solid var(--g200);border-radius:20px;font-size:11px;cursor:pointer;color:var(--g600);background:#fff;font-family:inherit;font-weight:600;transition:.12s}
+.chip:hover{border-color:var(--blue);color:var(--blue)}
+.chip.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+#school-list{flex:1;overflow-y:auto;padding:7px}
+.scard{padding:11px 12px;border-radius:10px;border:1.5px solid var(--g200);margin-bottom:5px;cursor:pointer;transition:all .12s;position:relative}
+.scard:hover{border-color:#93c5fd;background:var(--blue-l)}
+.scard.sel{border-color:var(--blue);background:var(--blue-m)}
+.scard.incmp{border-color:#4ade80;background:#f0fdf4}
+.scard-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}
+.scard-name{font-weight:700;font-size:13px;line-height:1.3}
+.badges{display:flex;gap:3px;flex-wrap:wrap}
+.badge{font-size:10px;padding:2px 6px;border-radius:10px;font-weight:700;white-space:nowrap}
+.bc{background:var(--blue-m);color:var(--blue)}
+.bm{background:#dcfce7;color:#15803d}
+.bf{background:#fce7f3;color:#9d174d}
+.bp{background:var(--g100);color:var(--g600)}
+.bs{background:#fef3c7;color:#92400e}
+.scard-meta{font-size:11px;color:var(--g400);margin-bottom:3px}
+.scard-dist{font-size:12px;color:var(--blue);font-weight:700;margin-top:3px}
+.cmp-btn{position:absolute;right:8px;bottom:8px;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--g200);background:#fff;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;transition:.12s}
+.cmp-btn:hover{border-color:#4ade80;background:#f0fdf4}
+.cmp-btn.on{background:#16a34a;border-color:#16a34a;color:#fff}
+#map-wrap{flex:1;position:relative;min-width:0}
+#map{width:100%;height:100%}
+#map-tip{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(37,99,235,.9);color:#fff;padding:8px 18px;border-radius:20px;font-size:13px;font-weight:700;z-index:400;display:none;pointer-events:none;white-space:nowrap}
+#right{width:336px;min-width:336px;background:#fff;border-left:1px solid var(--g200);display:flex;flex-direction:column;overflow:hidden}
+#detail-ph{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--g400);gap:12px;padding:30px;text-align:center}
+#detail-ph .ico{font-size:44px}
+#detail-ph p{font-size:13px;line-height:1.7}
+#detail-box{display:none;flex-direction:column;height:100%;overflow:hidden}
+#det-head{padding:15px 16px 12px;border-bottom:1px solid var(--g200);flex-shrink:0}
+#det-name{font-size:17px;font-weight:800;letter-spacing:-.3px;margin-bottom:7px}
+#det-badges{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.dbadge{font-size:12px;padding:3px 10px;border-radius:12px;font-weight:600}
+#det-dist{font-size:13px;color:var(--blue);font-weight:700;display:none;margin-bottom:8px}
+#det-body{flex:1;overflow-y:auto;padding-bottom:16px}
+.dsec{padding:13px 16px 10px;border-bottom:1px solid var(--g100)}
+.dsec-title{font-size:11px;font-weight:700;color:var(--g400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:9px}
+.info-tbl{width:100%;border-collapse:collapse}
+.info-tbl td{padding:5px 0;font-size:13px;vertical-align:top}
+.info-tbl td:first-child{color:var(--g400);width:115px;padding-right:8px}
+.info-tbl td:last-child{font-weight:600}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px}
+.stat-box{background:var(--g50);border-radius:10px;padding:10px;text-align:center}
+.stat-v{font-size:19px;font-weight:800;color:var(--blue);line-height:1.1;margin-bottom:2px}
+.stat-l{font-size:10px;color:var(--g400);font-weight:500}
+.bar-wrap{margin-bottom:8px}
+.bar-row{display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px}
+.bar-row span:last-child{font-weight:700}
+.bar-track{height:6px;background:var(--g100);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;transition:width .5s ease}
+.notable{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+.ntag{padding:3px 9px;background:var(--blue-l);color:var(--blue);border-radius:10px;font-size:11px;font-weight:700}
+.data-note{font-size:11px;color:var(--g400);margin-top:6px;line-height:1.5;font-style:italic}
+.source-note{font-size:10px;background:var(--g50);color:var(--g600);padding:4px 8px;border-radius:5px;margin-top:5px;display:inline-block}
+.adm-year-block{margin-bottom:12px}
+.adm-year-title{font-size:12px;font-weight:700;color:var(--g800);margin-bottom:5px;padding-bottom:3px;border-bottom:1px solid var(--g100)}
+.adm-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:13px;border-bottom:1px dotted var(--g100)}
+.adm-row:last-child{border-bottom:none}
+.adm-uni{color:var(--g600)}
+.adm-cnt{font-weight:800;color:var(--blue)}
+.adm-note{font-size:10px;color:var(--g400);margin-left:4px}
+.adm-detail-btn{display:inline-block;margin-top:8px;padding:6px 12px;background:var(--g50);border:1.5px solid var(--g200);border-radius:7px;font-size:12px;font-weight:600;color:var(--blue);cursor:pointer;width:100%;text-align:center;transition:.12s}
+.adm-detail-btn:hover{background:var(--blue-l);border-color:var(--blue-m)}
+.no-data{font-size:12px;color:var(--g400);font-style:italic;padding:6px 0}
+#cmp-bar{display:none;background:#fff;border-top:1px solid var(--g200);box-shadow:0 -3px 12px rgba(0,0,0,.08);padding:10px 16px;flex-shrink:0;gap:10px;flex-direction:column}
+#cmp-bar-top{display:flex;align-items:center;justify-content:space-between}
+#cmp-bar-title{font-size:13px;font-weight:700}
+#cmp-actions{display:flex;gap:7px}
+#cmp-clear{padding:6px 13px;background:#fff;border:1.5px solid var(--g200);border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit;color:var(--g600)}
+#cmp-go{padding:6px 16px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+#cmp-go:hover{background:var(--blue-d)}
+#cmp-slots{display:flex;gap:7px}
+.cmp-slot{flex:1;height:38px;border:1.5px dashed var(--g200);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--g400)}
+.cmp-slot.filled{background:var(--blue-l);border:1.5px solid var(--blue-m);color:var(--blue);font-weight:700;position:relative;padding:0 26px 0 9px;overflow:hidden}
+.cmp-slot-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}
+.cmp-slot-x{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:16px;height:16px;background:var(--blue);color:#fff;border-radius:50%;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+#modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center;padding:20px}
+#modal-box{background:#fff;border-radius:16px;max-width:980px;width:100%;max-height:88vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.2)}
+#modal-hdr{padding:16px 22px;border-bottom:1px solid var(--g200);display:flex;align-items:center;justify-content:space-between}
+#modal-hdr h2{font-size:16px;font-weight:800}
+#modal-close{width:30px;height:30px;border-radius:50%;border:none;background:var(--g100);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;color:var(--g600)}
+#modal-body{overflow:auto;flex:1;padding:18px 22px}
+#cmp-tbl{width:100%;border-collapse:collapse;font-size:13px}
+#cmp-tbl th{background:var(--blue);color:#fff;padding:11px 15px;text-align:center;font-weight:700;font-size:14px}
+#cmp-tbl th:first-child{text-align:left;background:var(--g800);width:130px}
+#cmp-tbl td{padding:9px 15px;text-align:center;border-bottom:1px solid var(--g100)}
+#cmp-tbl td:first-child{text-align:left;color:var(--g600);font-weight:600;background:var(--g50)}
+#cmp-tbl tr:hover td:not(:first-child){background:var(--blue-l)}
+.best{color:var(--blue);font-weight:800}
+.school-marker{position:relative;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,.3);border:2.5px solid #fff;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.school-marker:hover{transform:scale(1.2)}
+.school-marker.sel{transform:scale(1.45);border-color:#fbbf24;border-width:3px;box-shadow:0 0 0 4px rgba(251,191,36,.4),0 4px 12px rgba(0,0,0,.4)}
+.marker-label{display:none;position:absolute;bottom:40px;left:50%;transform:translateX(-50%);background:#fff;color:#1e293b;font-size:11px;font-weight:700;padding:3px 9px;border-radius:10px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.2);border:1.5px solid #fbbf24;pointer-events:none}
+.marker-label::after{content:'';position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#fbbf24;border-bottom:none}
+.school-marker.sel .marker-label{display:block}
+.home-marker{font-size:30px;cursor:default;filter:drop-shadow(0 2px 5px rgba(0,0,0,.4));line-height:1}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--g100)}
+::-webkit-scrollbar-thumb{background:var(--g200);border-radius:3px}
+</style>
+</head>
+<body>
+
+<div id="hdr">
+  <div id="logo">안양고선택<span>도우미</span></div>
+  <div id="home-wrap">
+    <span id="home-lbl">🏠 우리 집</span>
+    <input id="home-input" type="text" placeholder="예: 안양시 동안구 관양로 22" onkeydown="if(event.key==='Enter')searchHome()"/>
+    <button id="home-search-btn" onclick="searchHome()">검색</button>
+    <button id="map-pick-btn" onclick="togglePickMode()">지도 클릭</button>
+    <span id="home-set-lbl"></span>
+  </div>
+  <button id="cmp-badge" onclick="openCmpModal()">비교 <span id="cmp-n">0</span>개 · 비교하기 →</button>
+</div>
+
+<div id="body">
+  <div id="left">
+    <div id="list-hdr">
+      <div id="list-hdr-top">
+        <span id="list-title">고등학교 목록</span>
+        <span id="school-cnt"></span>
+      </div>
+      <div id="filters">
+        <button class="chip on" onclick="setFilter(this,'all')">전체</button>
+        <button class="chip" onclick="setFilter(this,'coed')">공학</button>
+        <button class="chip" onclick="setFilter(this,'male')">남고</button>
+        <button class="chip" onclick="setFilter(this,'female')">여고</button>
+        <button class="chip" onclick="setFilter(this,'pub')">공립</button>
+        <button class="chip" onclick="setFilter(this,'pri')">사립</button>
+      </div>
+    </div>
+    <div id="school-list"></div>
+  </div>
+
+  <div id="map-wrap">
+    <div id="map"></div>
+    <div id="map-tip">📍 지도를 클릭해 우리 집 위치를 선택하세요</div>
+  </div>
+
+  <div id="right">
+    <div id="detail-ph">
+      <div class="ico">🏫</div>
+      <p>지도 또는 목록에서<br>학교를 클릭하면<br>상세 정보가 표시됩니다</p>
+    </div>
+    <div id="detail-box">
+      <div id="det-head"></div>
+      <div id="det-body"></div>
+    </div>
+  </div>
+</div>
+
+<div id="cmp-bar">
+  <div id="cmp-bar-top">
+    <span id="cmp-bar-title">학교 비교 (최대 3개)</span>
+    <div id="cmp-actions">
+      <button id="cmp-clear" onclick="clearCmp()">초기화</button>
+      <button id="cmp-go" onclick="openCmpModal()">비교하기 →</button>
+    </div>
+  </div>
+  <div id="cmp-slots"></div>
+</div>
+
+<div id="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div id="modal-box">
+    <div id="modal-hdr">
+      <h2 id="modal-title">학교 비교</h2>
+      <button id="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+/* ─── DATA ───────────────────────────────────────────────────── */
+const SCHOOLS = [
+  {
+    id:1, name:'관양고등학교', type:'일반고', own:'공립', gender:'공학', district:'동안구',
+    addr:'경기도 안양시 동안구 일동로 115',
+    stats:{total:914, g1:319, g2:282, g3:311, cls:24.7, statsYear:2026},
+    col:{admitRate:57.78, admitRateYear:2025, r4:48.1},
+    admissionResults:[
+      {year:null, label:'과거 공개자료', sourceNote:'과거 공개자료', entries:[],
+       note:'성균관대·이화여대·인하대·경기대 등 개별 진학 사례 확인. 학교 전체 합격자 수는 확인 필요.'}
+    ],
+    schoolLife:{
+      nightStudy:{status:'운영 확인', time:null, participationType:null,
+        note:'2025학년도 3학년 1학기 야간자율학습 운영 및 참가신청 공지 확인. 2026학년도 운영시간은 확인 필요.', sourceNote:'2025학년도 공지'}
+    },
+    commute:{schoolBus:{status:'확인 필요', cost:null, schedule:null, note:null}}
+  },
+  {
+    id:2, name:'동안고등학교', type:'일반고', own:'공립', gender:'공학', district:'동안구',
+    addr:'경기도 안양시 동안구 부림로 71',
+    stats:{total:1024, g1:355, g2:319, g3:350, cls:26.3, statsYear:2026},
+    col:{admitRate:47.54, admitRateYear:2025, r4:41.0},
+    admissionResults:[
+      {year:2022, label:null, sourceNote:'공개자료', entries:[
+        {uni:'서울대학교', count:3}, {uni:'연세대학교', count:1}, {uni:'고려대학교', count:2},
+        {uni:'의대', count:1}, {uni:'서강대학교', count:1}, {uni:'성균관대학교', count:5},
+        {uni:'중앙대학교', count:7}, {uni:'경희대학교', count:4},
+        {uni:'KAIST', count:1}, {uni:'경인교대', count:2}
+      ]}
+    ],
+    schoolLife:{
+      nightStudy:{status:'확인 필요', time:null, participationType:null, note:null}
+    },
+    commute:{schoolBus:{status:'없음(공개자료)', cost:null, schedule:null, note:'공개자료상 자체 셔틀 없음. 최신 운영 여부는 확인 필요.'}}
+  },
+  {
+    id:3, name:'백영고등학교', type:'일반고', own:'사립', gender:'공학', district:'동안구',
+    addr:'경기도 안양시 동안구 관평로 94',
+    stats:{total:917, g1:318, g2:292, g3:307, cls:25.5, statsYear:2026},
+    col:{admitRate:52.20, admitRateYear:2025, r4:62.5},
+    admissionResults:[
+      {year:2026, label:null, sourceNote:'공개자료', entries:[
+        {uni:'서울대학교', count:4}
+      ]},
+      {year:null, label:'과거 공개자료', sourceNote:'과거 공개자료', entries:[
+        {uni:'서울대학교', count:null, countNote:'3~6명 범위'},
+        {uni:'연세대학교', count:15},
+        {uni:'의·치·한', count:15}
+      ], note:'기타 주요 대학 실적도 과거 공개자료에 있음'}
+    ],
+    schoolLife:{
+      nightStudy:{status:'운영 확인', time:'~22:00', participationType:null,
+        note:'과거 공개자료에서 밤 10시까지 운영된 자료 있음. 최신 2026학년도 운영시간은 확인 필요.', sourceNote:'과거 공개자료'}
+    },
+    commute:{schoolBus:{status:'확인 필요', cost:null, schedule:null, note:null}}
+  },
+  {
+    id:4, name:'인덕원고등학교', type:'일반고', own:'공립', gender:'공학', district:'동안구',
+    addr:'경기도 안양시 동안구 안양판교로 43',
+    stats:{total:817, g1:292, g2:256, g3:268, cls:24.0, statsYear:2026},
+    col:{admitRate:44.64, admitRateYear:2025, r4:44.5},
+    admissionResults:[
+      {year:2021, label:null, sourceNote:'공개자료', entries:[],
+       note:'대학별 합격자 수 확인 필요. 4년제 대학 합격자 비중 80% 이상, 수시 합격 비중 90% 이상.'}
+    ],
+    schoolLife:{
+      nightStudy:{status:'확인 필요', time:null, participationType:null, note:null}
+    },
+    commute:{schoolBus:{status:'없음(공개자료)', cost:null, schedule:null, note:'공개자료상 자체 통학버스 없음.'}}
+  },
+  {
+    id:5, name:'평촌고등학교', type:'일반고', own:'공립', gender:'공학', district:'동안구',
+    addr:'경기도 안양시 동안구 동안로 80',
+    stats:{total:1056, g1:356, g2:331, g3:349, cls:25.1, statsYear:2026},
+    col:{admitRate:55.68, admitRateYear:2025, r4:48.3},
+    admissionResults:[
+      {year:null, label:'과거 공개자료', sourceNote:'과거 공개자료', entries:[],
+       note:'서울대·연고대·KAIST·서울교대·성균관대 등 진학 사례 검색됨. 개별 사례와 학교 전체 합격자 수 구분 필요. 전체 합격자 수는 확인 필요.'}
+    ],
+    schoolLife:{
+      nightStudy:{status:'확인 필요', time:null, participationType:null, note:null}
+    },
+    commute:{schoolBus:{status:'확인 필요', cost:null, schedule:null, note:null}}
+  },
+  {
+    id:6, name:'양명고등학교', type:'일반고', own:'사립', gender:'남고', district:'만안구',
+    addr:'경기도 안양시 만안구 경수대로1001번길 184',
+    stats:{total:834, g1:293, g2:263, g3:278, cls:25.3, statsYear:2026},
+    col:{admitRate:63.49, admitRateYear:2025, r4:56.3},
+    admissionResults:[
+      {year:null, label:'과거 공개자료', sourceNote:'과거 공개자료', entries:[],
+       note:'의대 1건 이상, 경희대 1건 이상, 동국대 의예, DGIST 등 개별 진학 사례 확인. 학교 전체 합격자 수인지 개별 사례인지 구분 필요.'}
+    ],
+    schoolLife:{
+      nightStudy:{status:'확인 필요', time:null, participationType:null, note:null}
+    },
+    commute:{schoolBus:{status:'확인 필요', cost:null, schedule:null, note:null}}
+  },
+  {
+    id:7, name:'양명여자고등학교', type:'일반고', own:'사립', gender:'여고', district:'만안구',
+    addr:'경기도 안양시 만안구 경수대로1001번길 150',
+    stats:{total:744, g1:267, g2:229, g3:248, cls:24.8, statsYear:2026},
+    col:{admitRate:70.37, admitRateYear:2025, r4:69.0},
+    admissionResults:[
+      {year:2020, label:null, sourceNote:'공개자료', entries:[
+        {uni:'서울대학교', count:2}, {uni:'고려대학교', count:5}, {uni:'서강대학교', count:1},
+        {uni:'성균관대학교', count:5}, {uni:'한양대학교', count:1}, {uni:'중앙대학교', count:6},
+        {uni:'경희대학교', count:6}, {uni:'이화여자대학교', count:5}, {uni:'한국외국어대학교', count:3},
+        {uni:'건국대학교', count:2}, {uni:'동국대학교', count:7}, {uni:'홍익대학교', count:5},
+        {uni:'숙명여자대학교', count:5}, {uni:'세종대학교', count:3}, {uni:'숭실대학교', count:5}
+      ], note:'서울 주요 대학 합격자 86명 자료 있음'}
+    ],
+    schoolLife:{
+      nightStudy:{status:'확인 필요', time:null, participationType:null, note:null}
+    },
+    commute:{schoolBus:{status:'확인 필요', cost:null, schedule:null, note:null}}
+  },
+  {
+    id:8, name:'부흥고등학교', type:'일반고', own:'공립', gender:'공학', district:'동안구',
+    addr:'경기도 안양시 동안구 달안로 15',
+    stats:{total:1045, g1:358, g2:331, g3:340, cls:25.5, statsYear:2026},
+    col:{admitRate:58.61, admitRateYear:2025, r4:56.6},
+    admissionResults:[
+      {year:2019, label:null, sourceNote:'공개자료', entries:[
+        {uni:'서울대학교', count:1}, {uni:'연세대학교', count:5}, {uni:'고려대학교', count:11},
+        {uni:'의·치대', count:2}, {uni:'4년제 수시', count:251}, {uni:'정시', count:102}
+      ]},
+      {year:null, label:'다른 과거 공개자료', sourceNote:'과거 공개자료', entries:[
+        {uni:'서울대학교', count:2}, {uni:'연세대학교', count:4}, {uni:'고려대학교', count:12},
+        {uni:'의대', count:4}, {uni:'성균관대학교', count:4}, {uni:'한양대학교', count:7},
+        {uni:'경희대학교', count:8}
+      ]}
+    ],
+    schoolLife:{
+      nightStudy:{status:'확인 필요', time:null, participationType:null,
+        note:'운영 관련 과거 공개자료 있음. 최신 운영시간은 확인 필요.'}
+    },
+    commute:{schoolBus:{status:'확인 필요', cost:null, schedule:null, note:null}}
+  },
+  {
+    id:9, name:'성문고등학교', type:'일반고', own:'사립', gender:'공학', district:'만안구',
+    addr:'경기도 안양시 만안구 성결대학로64번길 9',
+    stats:{total:754, g1:267, g2:240, g3:247, cls:25.1, statsYear:2026},
+    col:{admitRate:59.55, admitRateYear:2025, r4:47.4},
+    admissionResults:[
+      {year:null, label:'과거 공개자료', sourceNote:'과거 공개자료', entries:[],
+       note:'고려대 1건 이상, 의대 1건 이상, 경희대 2건 이상, 가톨릭대, 동국대 등 개별 합격 사례 확인. 학교 전체 합격자 수와 개별 사례 구분 필요.'}
+    ],
+    schoolLife:{
+      nightStudy:{status:'운영 정황 확인', time:null, participationType:null,
+        note:'운영 정황 확인. 운영시간은 확인 필요.'}
+    },
+    commute:{schoolBus:{status:'운영', cost:'월 약 4만원', schedule:null,
+      note:'등교/하교 별도 이용 가능. 최신 비용 및 노선은 확인 필요.', sourceNote:'공개자료'}}
+  },
+  {
+    id:10, name:'안양고등학교', type:'일반고', own:'공립', gender:'공학', district:'만안구',
+    addr:'경기도 안양시 만안구 삼봉로 46',
+    stats:{total:935, g1:322, g2:296, g3:312, cls:25.3, statsYear:2026},
+    col:{admitRate:43.30, admitRateYear:2025, r4:56.5},
+    admissionResults:[
+      {year:null, label:'오래된 과거자료', sourceNote:'오래된 과거자료 (연도 확인 필요)', entries:[
+        {uni:'서울대학교', count:9}, {uni:'연세대학교', count:17}, {uni:'고려대학교', count:13},
+        {uni:'KAIST', count:1}, {uni:'POSTECH', count:1}
+      ]}
+    ],
+    schoolLife:{
+      nightStudy:{status:'운영', time:null, participationType:'자율참여 (신청제)',
+        note:'학생이 자유롭게 선택하는 자율 참여 방식으로 규정에 명시. 강제 참여 방식이 아님. 정확한 최신 운영시간은 확인 필요.'}
+    },
+    commute:{schoolBus:{status:'확인 필요', cost:null, schedule:null, note:null}}
+  },
+  {
+    id:11, name:'충훈고등학교', type:'일반고', own:'공립', gender:'공학', district:'만안구',
+    addr:'경기도 안양시 만안구 석수로 238',
+    stats:{total:721, g1:249, g2:220, g3:242, cls:22.5, statsYear:2026},
+    col:{admitRate:47.98, admitRateYear:2025, r4:46.4},
+    admissionResults:[
+      {year:null, label:'과거 공개자료', sourceNote:'과거 공개자료', entries:[],
+       note:'이화여대, 인하대, 한양대 ERICA, 경기대 등 개별 진학 사례 확인. 학교 전체 합격자 수와 개별 사례를 구분 필요.'}
+    ],
+    schoolLife:{
+      nightStudy:{status:'확인 필요', time:null, participationType:null, note:null}
+    },
+    commute:{schoolBus:{status:'확인 필요', cost:null, schedule:null, note:null}}
+  },
+  {
+    id:12, name:'신성고등학교', type:'일반고', own:'사립', gender:'남고', district:'만안구',
+    addr:'경기도 안양시 만안구 소곡로 93',
+    stats:{total:895, g1:313, g2:276, g3:306, cls:24.9, statsYear:2026},
+    col:{admitRate:57.57, admitRateYear:2025, r4:56.7},
+    admissionResults:[
+      {year:2026, label:null, sourceNote:'공개자료', entries:[
+        {uni:'서울대학교', count:15, note:'수시 1명 + 정시 14명'},
+        {uni:'의대', count:15}, {uni:'치대', count:4},
+        {uni:'한의대', count:4}, {uni:'약대', count:20}
+      ]},
+      {year:2025, label:null, sourceNote:'공개자료', entries:[
+        {uni:'서울대학교', count:14}, {uni:'연세대학교', count:26}, {uni:'고려대학교', count:43},
+        {uni:'의약계열', count:30}, {uni:'서강대학교', count:25}, {uni:'성균관대학교', count:39},
+        {uni:'한양대학교', count:41}, {uni:'중앙대학교', count:30}, {uni:'경희대학교', count:18}
+      ]},
+      {year:2023, label:null, sourceNote:'과거자료', entries:[
+        {uni:'서울대학교', count:15}, {uni:'고려대학교', count:26}, {uni:'연세대학교', count:20},
+        {uni:'성균관대학교', count:22}, {uni:'한양대학교', count:45}, {uni:'중앙대학교', count:62}
+      ]}
+    ],
+    schoolLife:{
+      nightStudy:{status:'운영 확인', time:'17:00 시작', participationType:null,
+        note:'2025학년도 자료 기준 17:00 자율학습 및 보충수업 시작. 하교버스 17:00/22:10 자료 있음.', sourceNote:'2025학년도 자료'}
+    },
+    commute:{schoolBus:{status:'운영 확인', cost:null, schedule:'하교 17:00 / 22:10',
+      note:'2026학년도 통학버스 안내 공지 확인. 최신 노선 및 비용 별도 확인 필요.', sourceNote:'2026학년도 공지'}}
+  },
+  {
+    id:13, name:'안양여자고등학교', type:'일반고', own:'사립', gender:'여고', district:'만안구',
+    addr:'경기도 안양시 만안구 안양로 357',
+    stats:{total:549, g1:202, g2:172, g3:175, cls:22.9, statsYear:2026},
+    col:{admitRate:54.05, admitRateYear:2025, r4:56.3},
+    admissionResults:[
+      {year:null, label:'과거 공개자료', sourceNote:'과거 공개자료', entries:[],
+       note:'서울대 1건 이상, 이화여대, 건국대, 숭실대 등 개별 합격 사례 확인. 학교 전체 합격자 수와 개별 사례를 구분 필요.'}
+    ],
+    schoolLife:{
+      nightStudy:{status:'운영 관련 자료 확인', time:null, participationType:null,
+        note:'자기주도학습/야간 학습 관련 운영자료 확인. 정확한 최신 운영시간은 확인 필요.', sourceNote:'공개자료'}
+    },
+    commute:{schoolBus:{status:'운영 자료 확인', cost:null, schedule:null,
+      note:'운영 자료 확인. 최신 노선/비용 확인 필요.'}}
+  }
+];
+
+/* ─── STATE ──────────────────────────────────────────────────── */
+let map, geocoder;
+let home = null, homeOverlay = null;
+let selId = null;
+let cmpList = [];
+let pickMode = false;
+let editingSchoolId = null;
+let curFilter = 'all';
+const overlays = {};
+const savedPositions = JSON.parse(localStorage.getItem('schoolPositions') || '{}');
+
+/* ─── KAKAO REST API ─────────────────────────────────────────── */
+const KAKAO_REST_KEY = 'b633de35ca41ba77e90c19fe1048f5fa';
+const kakaoGeocode = addr =>
+  fetch(`https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(addr)}`,
+    {headers:{Authorization:`KakaoAK ${KAKAO_REST_KEY}`}})
+  .then(r=>r.json()).then(d=>d.documents||[]);
+const kakaoKeywordSearch = kw =>
+  fetch(`https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(kw)}&category_group_code=SC4&x=126.9390&y=37.3920&radius=10000`,
+    {headers:{Authorization:`KakaoAK ${KAKAO_REST_KEY}`}})
+  .then(r=>r.json()).then(d=>d.documents||[]);
+const kakaoReverseGeocode = (lng,lat) =>
+  fetch(`https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lng}&y=${lat}`,
+    {headers:{Authorization:`KakaoAK ${KAKAO_REST_KEY}`}})
+  .then(r=>r.json()).then(d=>d.documents||[]);
+
+/* ─── MAP INIT ───────────────────────────────────────────────── */
+const mapContainer = document.getElementById('map');
+let mapReady = false;
+try {
+  map = new kakao.maps.Map(mapContainer, {
+    center: new kakao.maps.LatLng(37.3920, 126.9390),
+    level: 5
+  });
+  map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
+  mapReady = true;
+  kakao.maps.event.addListener(map, 'click', function(e) {
+    const ll = e.latLng;
+    if (editingSchoolId !== null) {
+      const s = SCHOOLS.find(x=>x.id===editingSchoolId);
+      s.lat=ll.getLat(); s.lng=ll.getLng();
+      overlays[editingSchoolId].setPosition(new kakao.maps.LatLng(s.lat,s.lng));
+      savedPositions[editingSchoolId]={lat:s.lat,lng:s.lng};
+      localStorage.setItem('schoolPositions',JSON.stringify(savedPositions));
+      editingSchoolId=null;
+      document.getElementById('map-tip').style.display='none';
+      mapContainer.style.cursor='';
+      renderList(); showDetail(s.id); return;
+    }
+    if (!pickMode) return;
+    kakaoReverseGeocode(ll.getLng(),ll.getLat())
+      .then(docs=>{
+        const label=docs.length>0?docs[0].address.address_name:'지도 선택 위치';
+        setHome(ll.getLat(),ll.getLng(),label);
+      }).catch(()=>setHome(ll.getLat(),ll.getLng(),'지도 선택 위치'));
+    togglePickMode();
+  });
+} catch(e) {
+  mapContainer.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:12px;color:#64748b;font-size:14px;padding:30px;text-align:center"><div style="font-size:40px">🗺</div><div style="font-weight:700">카카오 지도를 불러올 수 없습니다</div><div style="font-size:12px;color:#94a3b8;margin-top:4px">오류: ${e.message}</div></div>`;
+}
+
+/* ─── HELPERS ────────────────────────────────────────────────── */
+const calcDist=(la1,lo1,la2,lo2)=>{const R=6371,r=Math.PI/180,a=Math.sin((la2-la1)*r/2)**2+Math.cos(la1*r)*Math.cos(la2*r)*Math.sin((lo2-lo1)*r/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));};
+const fmt=km=>km<1?`${Math.round(km*1000)}m`:`${km.toFixed(1)}km`;
+const gBadge=g=>g==='남고'?'<span class="badge bm">남고</span>':g==='여고'?'<span class="badge bf">여고</span>':'<span class="badge bc">공학</span>';
+const oBadge=o=>o==='사립'?'<span class="badge bs">사립</span>':'<span class="badge bp">공립</span>';
+const mColor=s=>s.gender==='남고'?'#16a34a':s.gender==='여고'?'#db2777':'#2563eb';
+
+function statusChip(status) {
+  if (!status) return '<span style="color:#94a3b8;font-size:12px">정보 없음</span>';
+  const map = {
+    '운영':              'background:#d1fae5;color:#065f46',
+    '운영 확인':         'background:#d1fae5;color:#065f46',
+    '운영 정황 확인':    'background:#d9f99d;color:#365314',
+    '운영 관련 자료 확인':'background:#fef9c3;color:#713f12',
+    '운영 자료 확인':    'background:#fef9c3;color:#713f12',
+    '확인 필요':         'background:#f1f5f9;color:#64748b',
+    '없음(공개자료)':    'background:#fee2e2;color:#991b1b',
+  };
+  const st = map[status] || 'background:#f1f5f9;color:#64748b';
+  return `<span style="${st};padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700">${status}</span>`;
+}
+
+function bar(label, val, color) {
+  return `<div class="bar-wrap">
+    <div class="bar-row"><span>${label}</span><span>${val}%</span></div>
+    <div class="bar-track"><div class="bar-fill" style="width:${val}%;background:${color}"></div></div>
+  </div>`;
+}
+
+/* ─── HOME ───────────────────────────────────────────────────── */
+function searchHome() {
+  const val=document.getElementById('home-input').value.trim();
+  if(!val){alert('주소를 입력해 주세요.\n예: 안양시 동안구 관양로 22');return;}
+  const btn=document.getElementById('home-search-btn');
+  btn.textContent='검색 중…';btn.disabled=true;
+  kakaoGeocode(val).then(docs=>{
+    btn.textContent='검색';btn.disabled=false;
+    if(docs.length>0)setHome(parseFloat(docs[0].y),parseFloat(docs[0].x),docs[0].address_name);
+    else alert('주소를 찾을 수 없습니다.\n예: 안양시 평촌동, 안양시 동안구 관양로 22');
+  }).catch(()=>{btn.textContent='검색';btn.disabled=false;alert('주소 검색 중 오류가 발생했습니다.');});
+}
+function togglePickMode() {
+  pickMode=!pickMode;
+  const btn=document.getElementById('map-pick-btn'),tip=document.getElementById('map-tip');
+  if(pickMode){btn.classList.add('active');btn.textContent='선택 취소';tip.style.display='block';mapContainer.style.cursor='crosshair';}
+  else{btn.classList.remove('active');btn.textContent='지도 클릭';tip.style.display='none';mapContainer.style.cursor='';}
+}
+function setHome(lat,lng,label) {
+  home={lat,lng};
+  if(mapReady){
+    if(homeOverlay)homeOverlay.setMap(null);
+    const el=document.createElement('div');el.className='home-marker';el.textContent='🏠';
+    homeOverlay=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(lat,lng),content:el,yAnchor:1.0,xAnchor:0.5,zIndex:10});
+    homeOverlay.setMap(map);
+    map.setCenter(new kakao.maps.LatLng(lat,lng));
+  }
+  const lbl=document.getElementById('home-set-lbl');
+  lbl.style.display='inline';lbl.textContent=`📍 ${label}`;
+  document.getElementById('home-input').value=label;
+  renderList();if(selId)showDetail(selId);
+}
+
+/* ─── MARKERS ────────────────────────────────────────────────── */
+const markerEls={};
+function placeMarker(s) {
+  const el=document.createElement('div');
+  el.className='school-marker';el.style.background=mColor(s);
+  el.innerHTML=`🏫<div class="marker-label">${s.name}</div>`;
+  el.addEventListener('click',()=>{selId=s.id;updateMarkerStates();renderList();showDetail(s.id);});
+  const overlay=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(s.lat,s.lng),content:el,yAnchor:0.5,xAnchor:0.5,zIndex:5});
+  overlay.setMap(map);overlays[s.id]=overlay;markerEls[s.id]=el;
+}
+function updateMarkerStates() {
+  Object.entries(markerEls).forEach(([id,el])=>{
+    el.classList.toggle('sel',parseInt(id)===selId);
+    overlays[id].setZIndex(parseInt(id)===selId?20:5);
+  });
+}
+function buildMarkers() {
+  let done=0;
+  SCHOOLS.forEach(s=>{
+    if(savedPositions[s.id]){
+      s.lat=savedPositions[s.id].lat;s.lng=savedPositions[s.id].lng;
+      s.coordsOk=true;placeMarker(s);done++;
+      if(done===SCHOOLS.length)renderList();return;
+    }
+    kakaoGeocode(s.addr).then(docs=>{
+      if(docs.length>0){s.lat=parseFloat(docs[0].y);s.lng=parseFloat(docs[0].x);
+        console.log('[Geocoding OK - 주소]',s.name,s.lat,s.lng);return null;}
+      return kakaoKeywordSearch(s.name);
+    }).then(docs=>{
+      if(docs===null)return;
+      if(docs&&docs.length>0){s.lat=parseFloat(docs[0].y);s.lng=parseFloat(docs[0].x);
+        console.log('[Geocoding OK - 키워드]',s.name,s.lat,s.lng);}
+      else{s.coordsOk=false;console.warn('[Geocoding FAIL]',s.name);}
+    }).catch(err=>{s.coordsOk=false;console.error('[Geocoding ERROR]',s.name,err);
+    }).finally(()=>{
+      if(s.coordsOk!==false){s.coordsOk=true;placeMarker(s);}
+      done++;if(done===SCHOOLS.length)renderList();
+    });
+  });
+}
+function startPositionEdit(id) {
+  editingSchoolId=id;
+  const s=SCHOOLS.find(x=>x.id===id);
+  const tip=document.getElementById('map-tip');
+  tip.textContent=`📍 "${s.name}"의 정확한 위치를 지도에서 클릭하세요`;
+  tip.style.display='block';mapContainer.style.cursor='crosshair';
+}
+
+/* ─── FILTER / LIST ──────────────────────────────────────────── */
+function setFilter(el,f){curFilter=f;document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');renderList();}
+function filtered(){
+  return SCHOOLS.filter(s=>{
+    if(curFilter==='coed')return s.gender==='공학';
+    if(curFilter==='male')return s.gender==='남고';
+    if(curFilter==='female')return s.gender==='여고';
+    if(curFilter==='pub')return s.own==='공립';
+    if(curFilter==='pri')return s.own==='사립';
+    return true;
+  });
+}
+function renderList(){
+  const list=filtered().map(s=>({...s,d:home?calcDist(home.lat,home.lng,s.lat,s.lng):null}));
+  if(home)list.sort((a,b)=>a.d-b.d);
+  document.getElementById('school-cnt').textContent=`${list.length}개교`;
+  document.getElementById('school-list').innerHTML=list.map(s=>`
+    <div class="scard ${s.id===selId?'sel':''} ${cmpList.includes(s.id)?'incmp':''}"
+         onclick="selId=${s.id};updateMarkerStates();renderList();showDetail(${s.id});${s.coordsOk?`if(mapReady){map.setCenter(new kakao.maps.LatLng(${s.lat},${s.lng}));map.setLevel(4);}`:''}">
+      <div class="scard-top">
+        <div class="scard-name">${s.name}</div>
+        <div class="badges">${gBadge(s.gender)}${oBadge(s.own)}</div>
+      </div>
+      <div class="scard-meta">${s.district} · 전체 ${s.stats.total.toLocaleString()}명</div>
+      ${s.d!==null?`<div class="scard-dist">🏠 ${fmt(s.d)}</div>`:''}
+      <button class="cmp-btn ${cmpList.includes(s.id)?'on':''}" title="비교 추가/제거"
+              onclick="event.stopPropagation();toggleCmp(${s.id})">${cmpList.includes(s.id)?'✓':'+'}</button>
+    </div>`).join('');
+}
+
+/* ─── DETAIL HELPERS ─────────────────────────────────────────── */
+function detHead(s) {
+  const inc=cmpList.includes(s.id);
+  let h='<div id="det-name">'+s.name+'</div>';
+  h+='<div id="det-badges">'+gBadge(s.gender)+oBadge(s.own)+'<span class="badge bp">'+s.type+'</span><span class="badge bp">'+s.district+'</span></div>';
+  if(home&&s.coordsOk)h+='<div style="font-size:13px;color:var(--blue);font-weight:700;margin-bottom:8px">🏠 우리 집에서 '+fmt(calcDist(home.lat,home.lng,s.lat,s.lng))+'</div>';
+  if(!s.coordsOk)h+='<div style="font-size:12px;color:#dc2626;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:6px 10px;margin-bottom:8px">⚠ 위치를 찾지 못했습니다. 📍 위치 수정으로 직접 지정해주세요.<br><span style="color:#6b7280;font-size:11px">'+s.addr+'</span></div>';
+  h+='<div style="display:flex;gap:6px">';
+  h+='<button onclick="toggleCmp('+s.id+')" style="flex:1;padding:8px;background:var(--g100);border:1.5px solid var(--g200);border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;color:var(--g600)">'+(inc?'✓ 비교 목록에서 제거':'+ 비교 목록에 추가')+'</button>';
+  h+='<button onclick="startPositionEdit('+s.id+')" style="padding:8px 10px;background:#fff7ed;border:1.5px solid #fed7aa;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;color:#c2410c;white-space:nowrap">📍 위치 수정</button>';
+  h+='</div>';
+  return h;
+}
+
+function secBasicInfo(s) {
+  return `<div class="dsec">
+    <div class="dsec-title">기본 정보</div>
+    <table class="info-tbl">
+      <tr><td>학교 유형</td><td>${s.type}</td></tr>
+      <tr><td>공립/사립</td><td>${s.own}</td></tr>
+      <tr><td>성별</td><td>${s.gender}</td></tr>
+      <tr><td>주소</td><td style="font-size:11px">${s.addr}</td></tr>
+    </table>
+  </div>`;
+}
+
+function secStats(s) {
+  return `<div class="dsec">
+    <div class="dsec-title">학생 현황 <span style="font-size:10px;color:var(--g400);text-transform:none;font-weight:400">${s.stats.statsYear}년 기준</span></div>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-v">${s.stats.total.toLocaleString()}</div><div class="stat-l">전체 학생</div></div>
+      <div class="stat-box"><div class="stat-v">${s.stats.cls}</div><div class="stat-l">학급당 학생</div></div>
+      <div class="stat-box"><div class="stat-v">${s.col.admitRate}%</div><div class="stat-l">총 진학률</div></div>
+    </div>
+    <table class="info-tbl">
+      <tr><td>1학년</td><td>${s.stats.g1}명</td></tr>
+      <tr><td>2학년</td><td>${s.stats.g2}명</td></tr>
+      <tr><td>3학년</td><td>${s.stats.g3}명</td></tr>
+    </table>
+  </div>`;
+}
+
+function secSchoolLife(s) {
+  const ns = s.schoolLife.nightStudy;
+  let rows = `<tr><td>야간자율학습</td><td>${statusChip(ns.status)}</td></tr>`;
+  if (ns.time) rows += `<tr><td>운영시간</td><td>${ns.time}</td></tr>`;
+  if (ns.participationType) rows += `<tr><td>참여방식</td><td>${statusChip(ns.participationType)}</td></tr>`;
+  rows += `<tr><td>석식</td><td><span style="color:#94a3b8;font-size:12px">확인 필요</span></td></tr>`;
+  let noteHtml = '';
+  if (ns.note) noteHtml = `<div class="data-note">${ns.note}</div>`;
+  if (ns.sourceNote) noteHtml += `<span class="source-note">자료: ${ns.sourceNote}</span>`;
+  return `<div class="dsec">
+    <div class="dsec-title">📚 학교 생활</div>
+    <table class="info-tbl">${rows}</table>
+    ${noteHtml}
+  </div>`;
+}
+
+function secCommute(s) {
+  const bs = s.commute.schoolBus;
+  let rows = `<tr><td>학교 통학버스</td><td>${statusChip(bs.status)}</td></tr>`;
+  if (bs.schedule) rows += `<tr><td>하교 시간</td><td>${bs.schedule}</td></tr>`;
+  if (bs.cost) rows += `<tr><td>비용</td><td>${bs.cost}</td></tr>`;
+  let noteHtml = '';
+  if (bs.note) noteHtml = `<div class="data-note">${bs.note}</div>`;
+  if (bs.sourceNote) noteHtml += `<span class="source-note">자료: ${bs.sourceNote}</span>`;
+  return `<div class="dsec">
+    <div class="dsec-title">🚌 통학</div>
+    <table class="info-tbl">${rows}</table>
+    ${noteHtml}
+  </div>`;
+}
+
+function secAdmissionRate(s) {
+  const c = s.col;
+  let html = `<div class="dsec">
+    <div class="dsec-title">🎓 대학 진학 현황</div>`;
+  html += bar(`총 대학 진학률 (${c.admitRateYear}년 졸업생)`, c.admitRate, '#2563eb');
+  if (c.r4 != null) html += bar('4년제 대학 진학률', c.r4, '#7c3aed');
+  html += `<div class="data-note">총 진학률과 4년제 진학률은 별도 기준의 자료입니다.</div>
+  </div>`;
+  return html;
+}
+
+function secAdmissionHighlight(s) {
+  const results = s.admissionResults;
+  if (!results || !results.length) {
+    return `<div class="dsec">
+      <div class="dsec-title">🏆 주요 대학 합격 실적</div>
+      <div class="no-data">공개된 대학별 합격자 수를 확인할 수 없습니다.</div>
+    </div>`;
+  }
+  // Most recent year with a year number
+  const withYear = results.filter(r=>r.year!==null).sort((a,b)=>b.year-a.year);
+  const recent = withYear.length ? withYear[0] : null;
+  let html = `<div class="dsec">
+    <div class="dsec-title">🏆 주요 대학 합격 실적</div>`;
+  if (recent && recent.entries && recent.entries.length > 0) {
+    html += `<div class="adm-year-title">${recent.year}학년도 <span class="source-note">${recent.sourceNote||''}</span></div>`;
+    // Show top entries (max 5 in summary)
+    const topEntries = recent.entries.slice(0, 5);
+    topEntries.forEach(e => {
+      const cntText = e.count != null ? `<span class="adm-cnt">${e.count}명</span>` : `<span style="color:#94a3b8;font-size:12px">${e.countNote||'확인 필요'}</span>`;
+      const noteText = e.note ? `<span class="adm-note">(${e.note})</span>` : '';
+      html += `<div class="adm-row"><span class="adm-uni">${e.uni}</span><span>${cntText}${noteText}</span></div>`;
+    });
+    if (recent.note) html += `<div class="data-note">${recent.note}</div>`;
+  } else if (recent) {
+    html += `<div class="adm-year-title">${recent.year}학년도</div>`;
+    if (recent.note) html += `<div class="data-note">${recent.note}</div>`;
+    else html += `<div class="no-data">대학별 합격자 수 확인 필요</div>`;
+  } else {
+    // Only null-year entries
+    const entry = results[0];
+    html += `<div class="adm-year-title">${entry.label||'공개자료'}</div>`;
+    if (entry.entries && entry.entries.length > 0) {
+      entry.entries.slice(0, 4).forEach(e => {
+        const cntText = e.count != null ? `<span class="adm-cnt">${e.count}명</span>` : `<span style="color:#94a3b8;font-size:12px">${e.countNote||'확인 필요'}</span>`;
+        html += `<div class="adm-row"><span class="adm-uni">${e.uni}</span><span>${cntText}</span></div>`;
+      });
+    }
+    if (entry.note) html += `<div class="data-note">${entry.note}</div>`;
+  }
+  html += `<button class="adm-detail-btn" onclick="showAdmissionDetail(${s.id})">대학별 실적 자세히 보기 ›</button>`;
+  html += `</div>`;
+  return html;
+}
+
+/* ─── DETAIL ─────────────────────────────────────────────────── */
+function showDetail(id) {
+  const s = SCHOOLS.find(x=>x.id===id);
+  if (!s) return;
+  document.getElementById('detail-ph').style.display='none';
+  document.getElementById('detail-box').style.display='flex';
+  document.getElementById('det-head').innerHTML = detHead(s);
+  document.getElementById('det-body').innerHTML =
+    secBasicInfo(s) +
+    secStats(s) +
+    secSchoolLife(s) +
+    secCommute(s) +
+    secAdmissionRate(s) +
+    secAdmissionHighlight(s);
+}
+
+/* ─── ADMISSION DETAIL MODAL ─────────────────────────────────── */
+function showAdmissionDetail(id) {
+  const s = SCHOOLS.find(x=>x.id===id);
+  if (!s) return;
+  document.getElementById('modal-title').textContent = `🎓 ${s.name} 대학별 합격 실적`;
+  let html = '';
+  const results = s.admissionResults;
+  const hasAny = results.some(r=>r.entries&&r.entries.length>0);
+  if (!hasAny && !results.some(r=>r.note)) {
+    html = '<div style="color:#94a3b8;font-size:14px;padding:20px 0">공개된 대학별 합격자 수를 확인할 수 없습니다.</div>';
+  } else {
+    // Sort: year desc, null last
+    const sorted = [...results].sort((a,b)=>{
+      if(a.year===null&&b.year===null)return 0;
+      if(a.year===null)return 1;
+      if(b.year===null)return -1;
+      return b.year-a.year;
+    });
+    sorted.forEach(r => {
+      const title = r.year ? `${r.year}학년도` : (r.label||'과거 공개자료');
+      html += `<div class="adm-year-block">
+        <div class="adm-year-title" style="font-size:14px;font-weight:800;color:var(--g800);padding-bottom:6px;border-bottom:2px solid var(--g200);margin-bottom:8px">
+          ${title}
+          ${r.sourceNote?`<span class="source-note">${r.sourceNote}</span>`:''}
+        </div>`;
+      if (r.entries && r.entries.length > 0) {
+        r.entries.forEach(e => {
+          const cntText = e.count!=null ? `<b style="color:var(--blue)">${e.count}명</b>` : `<span style="color:#94a3b8">${e.countNote||'확인 필요'}</span>`;
+          const noteText = e.note ? ` <span style="font-size:11px;color:#94a3b8">(${e.note})</span>` : '';
+          html += `<div class="adm-row" style="font-size:14px"><span class="adm-uni">${e.uni}</span><span>${cntText}${noteText}</span></div>`;
+        });
+      } else {
+        html += `<div style="color:#94a3b8;font-size:13px;padding:4px 0">대학별 합격자 수 확인 필요</div>`;
+      }
+      if (r.note) html += `<div class="data-note" style="margin-top:6px">${r.note}</div>`;
+      html += `</div>`;
+    });
+  }
+  html += `<div style="margin-top:16px;padding:12px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px;color:#92400e">
+    ⚠ 위 자료는 공개된 입시 결과 자료이며, 정확성은 원본 출처에서 확인하세요.
+    연도별 데이터의 기준과 범위가 다를 수 있습니다.
+  </div>`;
+  document.getElementById('modal-body').innerHTML = `<table id="cmp-tbl" style="display:none"></table><div style="max-width:520px">${html}</div>`;
+  document.getElementById('modal-bg').style.display='flex';
+}
+
+/* ─── COMPARE ────────────────────────────────────────────────── */
+function toggleCmp(id){
+  if(cmpList.includes(id))cmpList=cmpList.filter(x=>x!==id);
+  else{if(cmpList.length>=3){alert('최대 3개까지 비교 가능합니다.');return;}cmpList.push(id);}
+  updateCmpBar();renderList();if(selId)showDetail(selId);
+}
+function updateCmpBar(){
+  const bar=document.getElementById('cmp-bar'),badge=document.getElementById('cmp-badge');
+  if(!cmpList.length){bar.style.display='none';badge.style.display='none';return;}
+  bar.style.display='flex';badge.style.display='block';
+  document.getElementById('cmp-n').textContent=cmpList.length;
+  const slots=[];
+  for(let i=0;i<3;i++){
+    const id=cmpList[i];
+    if(id!==undefined){const s=SCHOOLS.find(x=>x.id===id);
+      slots.push(`<div class="cmp-slot filled"><span class="cmp-slot-name">${s.name}</span><span class="cmp-slot-x" onclick="toggleCmp(${id})">✕</span></div>`);
+    }else slots.push(`<div class="cmp-slot">+ 추가</div>`);
+  }
+  document.getElementById('cmp-slots').innerHTML=slots.join('');
+}
+function clearCmp(){cmpList=[];updateCmpBar();renderList();if(selId)showDetail(selId);}
+
+function openCmpModal(){
+  if(cmpList.length<2){alert('비교할 학교를 2개 이상 선택해 주세요.');return;}
+  const ss=cmpList.map(id=>{const s=SCHOOLS.find(x=>x.id===id);return{...s,d:home?calcDist(home.lat,home.lng,s.lat,s.lng):null};});
+  const best={
+    total:Math.max(...ss.map(s=>s.stats.total)),
+    cls:Math.min(...ss.map(s=>s.stats.cls)),
+    admitRate:Math.max(...ss.map(s=>s.col.admitRate)),
+    r4:Math.max(...ss.map(s=>s.col.r4||0)),
+    d:home?Math.min(...ss.map(s=>s.d)):null
+  };
+  const rows=[
+    {lbl:'학교 유형',     fn:s=>s.type,             bk:null},
+    {lbl:'공립/사립',     fn:s=>s.own,              bk:null},
+    {lbl:'성별',          fn:s=>s.gender,           bk:null},
+    {lbl:'위치',          fn:s=>`안양시 ${s.district}`,bk:null},
+    {lbl:'전체 학생 수',  fn:s=>`${s.stats.total}명`, bk:'total', bfn:s=>s.stats.total, bdir:'max'},
+    {lbl:'학급당 학생',   fn:s=>`${s.stats.cls}명`,  bk:'cls',   bfn:s=>s.stats.cls,   bdir:'min'},
+    {lbl:'총 진학률',     fn:s=>`${s.col.admitRate}%`, bk:'admitRate', bfn:s=>s.col.admitRate, bdir:'max'},
+    {lbl:'4년제 진학률',  fn:s=>s.col.r4!=null?`${s.col.r4}%`:'확인 필요', bk:'r4', bfn:s=>s.col.r4||0, bdir:'max'},
+    ...(home?[{lbl:'집까지 거리',fn:s=>fmt(s.d),bk:'d',bfn:s=>s.d,bdir:'min'}]:[]),
+  ];
+  const thead=`<tr><th>항목</th>${ss.map(s=>`<th>${s.name}</th>`).join('')}</tr>`;
+  const tbody=rows.map(row=>{
+    const cells=ss.map(s=>{
+      const v=row.fn(s);
+      const isBest=row.bk&&row.bfn&&(row.bdir==='max'?row.bfn(s)===best[row.bk]:row.bfn(s)===best[row.bk]);
+      return`<td ${isBest?'class="best"':''}>${v}</td>`;
+    }).join('');
+    return`<tr><td>${row.lbl}</td>${cells}</tr>`;
+  }).join('');
+  document.getElementById('modal-title').textContent='학교 비교';
+  document.getElementById('modal-body').innerHTML=`<table id="cmp-tbl"><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
+  document.getElementById('modal-bg').style.display='flex';
+}
+function closeModal(){document.getElementById('modal-bg').style.display='none';}
+
+/* ─── INIT ───────────────────────────────────────────────────── */
+renderList();
+if(mapReady)buildMarkers();
+</script>
+</body>
+</html>
